@@ -1,252 +1,151 @@
-import React, { useState, useMemo } from "react";
-import "./App.css"; // Add your styles here
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import "../style/home.css";
 
-// Reusable Custom Table Component
-const CustomTable = ({ data, columns, styles }) => {
-  const [sortConfig, setSortConfig] = useState(null);
-  const [filters, setFilters] = useState({});
-
-  const sortedData = useMemo(() => {
-    if (!sortConfig) return data;
-    const sorted = [...data].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      if (aValue < bValue) return sortConfig.direction === "ascending" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "ascending" ? 1 : -1;
-      return 0;
+const Home = () => {
+    let [allProducts, setAllProducts] = useState([]);
+    let [filteredProducts, setFilteredProducts] = useState([]);
+    let [idFlag, setIdFlag] = useState(true);
+    let [titleFlag, setTitleFlag] = useState(true);
+    let [descFlag, setDescFlag] = useState(true);
+    let [catFlag, setCatFlag] = useState(true);
+    let [priceFlag, setPriceFlag] = useState(true);
+    let [priceFilter, setPriceFilter] = useState({
+        minPrice: 0,
+        maxPrice: 0
     });
-    return sorted;
-  }, [data, sortConfig]);
 
-  const filteredData = useMemo(() => {
-    return sortedData.filter(row => {
-      return Object.keys(filters).every(key => {
-        const value = String(row[key] || "").toLowerCase();
-        const filterValue = filters[key]?.toLowerCase() || "";
-        return value.includes(filterValue);
-      });
-    });
-  }, [sortedData, filters]);
-
-  const handleSort = key => {
-    let direction = "ascending";
-    if (sortConfig?.key === key && sortConfig.direction === "ascending") {
-      direction = "descending";
-    } else if (sortConfig?.key === key && sortConfig.direction === "descending") {
-      direction = null;
+    // Fetch data from API
+    async function fetchData() {
+        let res = await axios.get(https://fakestoreapi.com/products);
+        let response = res.data;
+        setAllProducts(response);
+        setFilteredProducts(response);
     }
-    setSortConfig(direction ? { key, direction } : null);
-  };
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
+    // Function for product sort by ID
+    function sortId() {
+        const sorted = [...filteredProducts].sort((a, b) =>
+            idFlag ? b.id - a.id : a.id - b.id
+        );
+        setFilteredProducts(sorted);
+        setIdFlag(!idFlag);
+    }
 
-  return (
-    <div className="table-container" style={styles?.container}>
-      <table>
-        <thead style={styles?.header}>
-          <tr>
-            {columns.map(column => (
-              <th key={column.key}>
-                <div className="header-cell">
-                  <span>{column.title}</span>
-                  {column.sortable && (
-                    <button onClick={() => handleSort(column.key)}>
-                      {sortConfig?.key === column.key
-                        ? sortConfig.direction === "ascending"
-                          ? "▲"
-                          : "▼"
-                        : "⇵"}
-                    </button>
-                  )}
-                  {column.filterable && (
-                    <input
-                      type="text"
-                      placeholder={`Filter ${column.title}`}
-                      onChange={e => handleFilterChange(column.key, e.target.value)}
-                    />
-                  )}
+    // Function for product sort by title
+    function sortTitle() {
+        const sorted = [...filteredProducts].sort((a, b) =>
+            titleFlag ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)
+        );
+        setFilteredProducts(sorted);
+        setTitleFlag(!titleFlag);
+    }
+
+    // Function for product sort by description
+    function sortDesc() {
+        const sorted = [...filteredProducts].sort((a, b) =>
+            descFlag ? a.description.localeCompare(b.description) : b.description.localeCompare(a.description)
+        );
+        setFilteredProducts(sorted);
+        setDescFlag(!descFlag);
+    }
+
+    // Function for product sort by category
+    function sortCat() {
+        const sorted = [...filteredProducts].sort((a, b) =>
+            catFlag ? a.category.localeCompare(b.category) : b.category.localeCompare(a.category)
+        );
+        setFilteredProducts(sorted);
+        setCatFlag(!catFlag);
+    }
+
+    // Function for product sort by price
+    function sortPrice() {
+        const sorted = [...filteredProducts].sort((a, b) =>
+            priceFlag ? b.price - a.price : a.price - b.price
+    );
+    setFilteredProducts(sorted);
+    setPriceFlag(!priceFlag);
+}
+
+// Start
+// Function to handle price filter inputs
+function handleInputPrice(e) {
+    const { name, value } = e.target;
+        setPriceFilter((prevState) => ({
+            ...prevState,
+            [name]: parseFloat(value) || 0,
+        }));
+    }
+// start
+    // Function to filter products by price range
+    function handlePriceFilter() {
+        const filtered = allProducts.filter(
+            (item) => item.price >= priceFilter.minPrice && item.price <= priceFilter.maxPrice
+        );
+        setFilteredProducts(filtered);
+    }
+
+    // Function for Debouncing filter by search
+    function debouncingfilter(e) {
+        let setTimer
+        clearInterval(setTimer)
+        let value = e.target.value
+        setTimer = setTimeout(() => {
+            let filterSearch = allProducts.filter((res) => {
+                return res.title.toLowerCase().includes(value.toLowerCase())
+            })
+            setFilteredProducts(filterSearch)
+        }, 1000)
+    }
+    // Fetch data on component mount
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    return (
+        <div>
+            <h1>Home</h1>
+            <div className="topSearch">
+                <div className="searchBox">
+                    <input onInput={debouncingfilter} placeholder="Search by title" type="text" />
                 </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody style={styles?.body}>
-          {filteredData.map((row, idx) => (
-            <tr key={idx}>
-              {columns.map(column => (
-                <td key={column.key}>{row[column.key]}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-// Reusable Custom Form Component
-const InputField = ({ field, value, onChange }) => {
-  const handleChange = e => onChange(field.key, e.target.value);
-
-  switch (field.type) {
-    case "text":
-      return (
-        <div>
-          <label>{field.label}</label>
-          <input
-            type="text"
-            placeholder={field.placeholder}
-            value={value || ""}
-            onChange={handleChange}
-          />
+                <div className="filterPrice">
+                    Min Price: <input onInput={handleInputPrice} name="minPrice" type="text" placeholder="min price" />
+                    Max Price: <input onInput={handleInputPrice} name="maxPrice" type="text" placeholder="max price" />
+                    <button onClick={handlePriceFilter}>Search</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style={{ width: "50px" }}>ID <button onClick={sortId}>{idFlag ? '↓' : '↑'}</button></th>
+                        <th>Title <button onClick={sortTitle}>{titleFlag ? '↓' : '↑'}</button></th>
+                        <th>Description <button onClick={sortDesc}>{descFlag ? '↓' : '↑'}</button></th>
+                        <th style={{ width: "100px" }}>Category <button onClick={sortCat}>{catFlag ? '↓' : '↑'}</button></th>
+                        <th style={{ width: "70px" }}>Price <button onClick={sortPrice}>{priceFlag ? '↓' : '↑'}</button></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredProducts.length > 0 ? (
+                        filteredProducts.map((ele) => (
+                            <tr key={ele.id}>
+                                <td>{ele.id}</td>
+                                <td>{ele.title}</td>
+                                <td>{ele.description}</td>
+                                <td>{ele.category}</td>
+                                <td>${ele.price.toFixed(2)}</td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="5">No products found</td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
         </div>
-      );
-    case "textarea":
-      return (
-        <div>
-          <label>{field.label}</label>
-          <textarea
-            placeholder={field.placeholder}
-            value={value || ""}
-            onChange={handleChange}
-          />
-        </div>
-      );
-    case "select":
-      return (
-        <div>
-          <label>{field.label}</label>
-          <select value={value || ""} onChange={handleChange}>
-            {field.options.map(option => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-      );
-    default:
-      return null;
-  }
+    );
 };
 
-const FormSystem = ({ config, onSubmit }) => {
-  const [formData, setFormData] = useState(() =>
-    config.reduce((acc, field) => {
-      acc[field.key] = field.defaultValue || "";
-      return acc;
-    }, {})
-  );
-
-  const handleChange = (key, value) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleSubmit = e => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {config.map(field => (
-        <InputField
-          key={field.key}
-          field={field}
-          value={formData[field.key]}
-          onChange={handleChange}
-        />
-      ))}
-      <button type="submit">Submit</button>
-    </form>
-  );
-};
-
-// Reusable Custom Date Picker Component
-const DatePicker = ({ onSelect }) => {
-  const [customRange, setCustomRange] = useState({ from: "", to: "" });
-
-  const handlePresetClick = preset => {
-    const now = new Date();
-    let range;
-    if (preset === "Today") range = { from: now, to: now };
-    if (preset === "Yesterday") range = { from: new Date(now - 864e5), to: new Date(now - 864e5) };
-    onSelect(range);
-  };
-
-  const handleCustomRangeChange = e => {
-    setCustomRange({ ...customRange, [e.target.name]: e.target.value });
-  };
-
-  return (
-    <div>
-      <button onClick={() => handlePresetClick("Today")}>Today</button>
-      <button onClick={() => handlePresetClick("Yesterday")}>Yesterday</button>
-      <div>
-        <input
-          type="date"
-          name="from"
-          value={customRange.from}
-          onChange={handleCustomRangeChange}
-        />
-        <input
-          type="date"
-          name="to"
-          value={customRange.to}
-          onChange={handleCustomRangeChange}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Main App Component
-const App = () => {
-  const tableData = [
-    { id: 1, name: "Alice", age: 25 },
-    { id: 2, name: "Bob", age: 30 },
-    { id: 3, name: "Charlie", age: 20 },
-  ];
-
-  const tableColumns = [
-    { key: "id", title: "ID", sortable: true, filterable: true },
-    { key: "name", title: "Name", sortable: true, filterable: true },
-    { key: "age", title: "Age", sortable: true, filterable: false },
-  ];
-
-  const formConfig = [
-    { key: "name", type: "text", label: "Name", placeholder: "Enter your name" },
-    {
-      key: "feedback",
-      type: "textarea",
-      label: "Feedback",
-      placeholder: "Enter your feedback",
-    },
-    {
-      key: "rating",
-      type: "select",
-      label: "Rating",
-      options: [1, 2, 3, 4, 5],
-    },
-  ];
-
-  return (
-    <div className="App">
-      <h1>Custom Table</h1>
-      <CustomTable data={tableData} columns={tableColumns} />
-
-      <h1>Custom Form</h1>
-      <FormSystem
-        config={formConfig}
-        onSubmit={data => console.log("Form Submitted:", data)}
-      />
-
-      <h1>Custom Date Picker</h1>
-      <DatePicker onSelect={range => console.log("Date Selected:", range)} />
-    </div>
-  );
-};
-
-export default App;
+export default Home;
